@@ -42,7 +42,7 @@ and because a good programmer is a lazy programmer I&amp;rsquo;ll use convention
 
 &lt;ul&gt;
 &lt;li&gt;View type names end with &amp;lsquo;View&amp;rsquo;&lt;/li&gt;
-&lt;li&gt;Model types names end with &amp;lsquo;Model&amp;rsquo;&lt;/li&gt;
+&lt;li&gt;Model type names end with &amp;lsquo;Model&amp;rsquo;&lt;/li&gt;
 &lt;li&gt;View and Model live right next to each other in the same namespace and assembly.&lt;/li&gt;
 &lt;li&gt;ContentControls are magic.&lt;/li&gt;
 &lt;/ul&gt;
