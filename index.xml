@@ -22,7 +22,7 @@
 &lt;p&gt;I was working with the &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.windows.controls.tabcontrol(v=vs.110).aspx&#34;&gt;TabControl&lt;/a&gt; the other day
  and I wanted to prevent the user from abandoning the task he was currently performing by cancelling the selection of a new tab.&lt;/p&gt;
 
-&lt;p&gt;This was more dificult than expected because &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.windows.controls.primitives.selector(v=vs.110).aspx&#34;&gt;Selector&lt;/a&gt;
+&lt;p&gt;This was more difficult than expected because &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.windows.controls.primitives.selector(v=vs.110).aspx&#34;&gt;Selector&lt;/a&gt;
  does not implement a SelectionChanging event with which you can cancel the selection changes.&lt;/p&gt;
 
 &lt;p&gt;Enter the  &lt;em&gt;SelectorAttachedProperties.HasActivatableSupport&lt;/em&gt; dependency property. Together with an &lt;em&gt;IActivatable&lt;/em&gt; interface that is implemented by the model for the tab page it will take care of the nasty details of cancelling a selection.&lt;/p&gt;
