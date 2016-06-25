@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>The Dizzy Coder</title>
-    <link>https://resc.github.io/</link>
-    <description>Recent content on The Dizzy Coder</description>
+    <title>Tabcontrol on The Dizzy Coder</title>
+    <link>https://resc.github.io/tags/tabcontrol/</link>
+    <description>Recent content in Tabcontrol on The Dizzy Coder</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <managingEditor>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</managingEditor>
     <webMaster>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</webMaster>
     <lastBuildDate>Sat, 25 Jun 2016 00:00:00 +0200</lastBuildDate>
-    <atom:link href="https://resc.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://resc.github.io/tags/tabcontrol/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Cancel That Please</title>
@@ -145,143 +145,6 @@
 &lt;li&gt;&lt;a href=&#34;http://stackoverflow.com/questions/30706758/how-to-cancel-tab-change-in-wpf-tabcontrol&#34;&gt;Stack Overflow&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&#34;https://coderelief.net/2011/11/07/fixing-issynchronizedwithcurrentitem-and-icollectionview-cancel-bug-with-an-attached-property/&#34;&gt;CodeRelief.NET&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>WPF Magic Without Frameworks</title>
-      <link>https://resc.github.io/post/wpf-magic/</link>
-      <pubDate>Sat, 04 Jun 2016 11:10:02 +0200</pubDate>
-      <author>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</author>
-      <guid>https://resc.github.io/post/wpf-magic/</guid>
-      <description>
-
-&lt;p&gt;Building WPF applications is challenging is you&amp;rsquo;re new to WPF.
-There are lots of frameworks, components and toolkits to choose from and WPF is no small framework itself.
-I&amp;rsquo;ll show you some tricks to build a WPF UI without toolkits but with magic.&lt;/p&gt;
-
-&lt;p&gt;But first some basic concepts I&amp;rsquo;ll use a lot.&lt;/p&gt;
-
-&lt;ol&gt;
-&lt;li&gt;A &lt;em&gt;View&lt;/em&gt; is WPF FrameworkElement or a control derived from it.&lt;/li&gt;
-&lt;li&gt;A  &lt;em&gt;ViewModel&lt;/em&gt; will be (in) the &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.windows.frameworkelement.datacontext(v=vs.110).aspx&#34;&gt;DataContext&lt;/a&gt; of the view and contain everything the view needs to do its viewy things.&lt;/li&gt;
-&lt;li&gt;A &lt;em&gt;DataModel&lt;/em&gt; contains the actual data that the user cares about and will be put in properties on the viewmodel.&lt;/li&gt;
-&lt;li&gt;&lt;em&gt;&lt;a href=&#34;https://msdn.microsoft.com/en-us/library/ms742521(v=vs.100).aspx&#34;&gt;DataTemplates&lt;/a&gt;&lt;/em&gt; are WPF&amp;rsquo;s way to say &amp;ldquo;I want this model bound to this view structure&amp;rdquo;&lt;/li&gt;
-&lt;li&gt;&lt;em&gt;&lt;a href=&#34;https://msdn.microsoft.com/en-us/library/ms742521(v=vs.100).aspx&#34;&gt;Styles&lt;/a&gt;&lt;/em&gt; are WPF&amp;rsquo;s way to say &amp;ldquo;I want this view to be configured in this way&amp;rdquo;&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;h1 id=&#34;show-me-the-magic&#34;&gt;Show Me The Magic!&lt;/h1&gt;
-
-&lt;p&gt;Ok, I&amp;rsquo;m going to make Views magically appear when we bind a ContentControl.Content property to a model.
-and because a good programmer is a lazy programmer I&amp;rsquo;ll use convention over configuration to do so.&lt;/p&gt;
-
-&lt;p&gt;The conventions are:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;View type names end with &amp;lsquo;View&amp;rsquo;&lt;/li&gt;
-&lt;li&gt;Model type names end with &amp;lsquo;Model&amp;rsquo;&lt;/li&gt;
-&lt;li&gt;View and Model live right next to each other in the same namespace and assembly.&lt;/li&gt;
-&lt;li&gt;ContentControls are magic.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;To turn the magic on I&amp;rsquo;ll create a custom DataTemplateSelector that finds the right View for the model bound to the ContentControl.Content property. and set the ContentControl.ContentTemplateSector with it.&lt;/p&gt;
-
-&lt;p&gt;And because magic is only magic if it happens without manual labour I&amp;rsquo;ll put a Style for ContentControl in the application level resources so every ContentControl gets that ContentTemplateSelector.&lt;/p&gt;
-
-&lt;p&gt;In App.xaml&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-xaml&#34;&gt;&amp;lt;Application.Resources&amp;gt;
-    &amp;lt;!--Create the DataTemplateSelector --&amp;gt;
-    &amp;lt;conventions:ConventionDataTemplateSelector x:Key=&amp;quot;ConventionDataTemplateSelector&amp;quot; /&amp;gt;
-    
-    &amp;lt;!-- Modify ContentControl to use ConventionDataTemplateSelector for its Content--&amp;gt;
-    &amp;lt;Style TargetType=&amp;quot;ContentControl&amp;quot;&amp;gt;
-        &amp;lt;Setter Property=&amp;quot;ContentTemplateSelector&amp;quot; Value=&amp;quot;{StaticResource ConventionDataTemplateSelector}&amp;quot; /&amp;gt;
-    &amp;lt;/Style&amp;gt;
-&amp;lt;/Application.Resources&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And the code for the ConventionDataTemplateSelector:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-csharp&#34;&gt;   
-    public class ConventionDataTemplateSelector : DataTemplateSelector
-    {
-        // cache the templates until the model goes away
-        private readonly ConditionalWeakTable&amp;lt;object, DataTemplate&amp;gt; _templatesCache = new ConditionalWeakTable&amp;lt;object, DataTemplate&amp;gt;();
-
-        const string Model = &amp;quot;Model&amp;quot;;
-        const string View = &amp;quot;View&amp;quot;;
-
-        public override DataTemplate SelectTemplate(object item, DependencyObject container)
-        {
-            // Don&#39;t use the selector in design mode in Visual Studio
-            if (DesignerProperties.GetIsInDesignMode(container))
-                return base.SelectTemplate(item, container);
-
-            if (item != null)
-            {
-                lock (_templatesCache)
-                {
-                    DataTemplate template;
-                    if (_templatesCache.TryGetValue(item, out template))
-                        return template;
-
-                    var templateType = GetTemplateTypeFor(item, container);
-                    template = new DataTemplate
-                    {
-                        VisualTree = new FrameworkElementFactory
-                        {
-                            Type = templateType
-                        }
-                    };
-
-                    _templatesCache.Add(item, template);
-                    return template;
-                }
-            }
-
-            return base.SelectTemplate(null, container);
-        }
-
-        public virtual Type GetTemplateTypeFor(object item, DependencyObject container)
-        {
-            var type = item.GetType();
-            try
-            {
-                if (!type.Name.EndsWith(Model, StringComparison.Ordinal))
-                {
-                    throw new TypeLoadException($&amp;quot;type {type} does not conform to the conventions or a viewmodel,&amp;quot; +
-                                                $&amp;quot; the type&#39;s name should end with &#39;{Model}&#39;&amp;quot;);
-                }
-
-                var viewTypeName = type.FullName;
-                viewTypeName = viewTypeName.Substring(0, viewTypeName.Length - Model.Length) + View;
-
-                try
-                {
-                    // Load the view type from the same assembly as the model type.
-                    var templateTypeFor = type.Assembly.GetType(viewTypeName, true);
-                    return templateTypeFor;
-                }
-                catch (Exception e)
-                {
-                    throw new TypeLoadException($&amp;quot;{GetType().Name}: Error loading view type {viewTypeName} for model {type}: {e.Message}&amp;quot;, e);
-                }
-            }
-            catch (TypeLoadException)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                throw new TypeLoadException($&amp;quot;{GetType().Name}: Error loading view for model {type}: {e.Message}&amp;quot;, e);
-            }
-        }
-    }
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;See &lt;a href=&#34;https://github.com/resc/wpfmagic/tree/master/ConventionDataTemplateSelector&#34;&gt;the full code here&lt;/a&gt;.&lt;/p&gt;
 </description>
     </item>
     

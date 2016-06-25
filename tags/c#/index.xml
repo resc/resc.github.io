@@ -8,8 +8,145 @@
     <language>en-us</language>
     <managingEditor>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</managingEditor>
     <webMaster>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</webMaster>
-    <lastBuildDate>Sat, 04 Jun 2016 11:10:02 +0200</lastBuildDate>
+    <lastBuildDate>Sat, 25 Jun 2016 00:00:00 +0200</lastBuildDate>
     <atom:link href="https://resc.github.io/tags/c" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Cancel That Please</title>
+      <link>https://resc.github.io/post/cancel-that-please/</link>
+      <pubDate>Sat, 25 Jun 2016 00:00:00 +0200</pubDate>
+      <author>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</author>
+      <guid>https://resc.github.io/post/cancel-that-please/</guid>
+      <description>
+
+&lt;p&gt;I was working with the &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.windows.controls.tabcontrol(v=vs.110).aspx&#34;&gt;TabControl&lt;/a&gt; the other day
+ and I wanted to prevent the user from abandoning the task he was currently performing by cancelling the selection of a new tab.&lt;/p&gt;
+
+&lt;p&gt;This was more dificult than expected because &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.windows.controls.primitives.selector(v=vs.110).aspx&#34;&gt;Selector&lt;/a&gt;
+ does not implement a SelectionChanging event with which you can cancel the selection changes.&lt;/p&gt;
+
+&lt;p&gt;Enter the  &lt;em&gt;SelectorAttachedProperties.HasActivatableSupport&lt;/em&gt; dependency property. Together with an &lt;em&gt;IActivatable&lt;/em&gt; interface that is implemented by the model for the tab page it will take care of the nasty details of cancelling a selection.&lt;/p&gt;
+
+&lt;p&gt;the &lt;em&gt;Activate&lt;/em&gt; and &lt;em&gt;Deactivate&lt;/em&gt; methods wil get called on the model when a tab is switched, and if  &lt;em&gt;Deactivate&lt;/em&gt; returns false the tab won&amp;rsquo;t switch.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/resc/wpfmagic/tree/master/SelectorAttachedPropertiesHasActivatableSupport&#34;&gt;See the full code here&lt;/a&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-xaml&#34;&gt; &amp;lt;TabControl utils:SelectorAttachedProperties.HasActivatableSupport=&amp;quot;True&amp;quot;&amp;gt;
+  &amp;lt;!-- ... --&amp;gt;
+&amp;lt;/TabControl&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-csharp&#34;&gt;    /// &amp;lt;summary&amp;gt; IActivatable should be implemented by a ViewModel. &amp;lt;/summary&amp;gt;
+    public interface IActivatable
+    {
+        /// &amp;lt;summary&amp;gt; Called when the module is activated. &amp;lt;/summary&amp;gt;
+        void Activate();
+
+        /// &amp;lt;summary&amp;gt; Return true to continue with deactivation, false to cancel deactivation. &amp;lt;/summary&amp;gt;
+        bool Deactivate();
+    }
+
+    public static class SelectorAttachedProperties
+    {
+        private static readonly Type _ownerType = typeof(SelectorAttachedProperties);
+
+        private static readonly ConditionalWeakTable&amp;lt;Selector, ActivationHandler&amp;gt; _handlers = new ConditionalWeakTable&amp;lt;Selector, ActivationHandler&amp;gt;();
+
+
+        public static readonly DependencyProperty HasActivatableSupportProperty =
+            DependencyProperty.RegisterAttached(&amp;quot;HasActivatableSupport&amp;quot;, typeof(bool), _ownerType,
+            new PropertyMetadata(false, HasActivatableSupportChanged));
+
+        public static bool GetHasActivatableSupport(DependencyObject obj)
+        {
+            return (bool)obj.GetValue(HasActivatableSupportProperty);
+        }
+
+        public static void SetHasActivatableSupport(DependencyObject obj, bool value)
+        {
+            obj.SetValue(HasActivatableSupportProperty, value);
+        }
+
+        private static void HasActivatableSupportChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var selector = d as Selector;
+            if (selector == null || !(e.OldValue is bool &amp;amp;&amp;amp; e.NewValue is bool) || e.OldValue == e.NewValue)
+                return;
+
+            var enableActivatableSupport = (bool)e.NewValue;
+            var handler = _handlers.GetOrCreateValue(selector);
+
+            TypeDescriptor.GetProperties(selector)[&amp;quot;ItemsSource&amp;quot;].RemoveValueChanged(selector, handler.OnItemsSourceChanged);
+            selector.SelectionChanged -= handler.OnSelectionChanged;
+
+            if (enableActivatableSupport)
+            {
+                selector.IsSynchronizedWithCurrentItem = true;
+                TypeDescriptor.GetProperties(selector)[&amp;quot;ItemsSource&amp;quot;].AddValueChanged(selector, handler.OnItemsSourceChanged);
+                selector.SelectionChanged += handler.OnSelectionChanged;
+            }
+        }
+
+        private class ActivationHandler
+        {
+            ICollectionView _collectionView;
+
+            public void OnItemsSourceChanged(object sender, EventArgs e)
+            {
+                var selector = sender as Selector;
+                if (selector != null)
+                {
+                    var itemsSource = selector.ItemsSource;
+                    _collectionView = itemsSource as ICollectionView ?? CollectionViewSource.GetDefaultView(itemsSource);
+                    _collectionView.CurrentChanging += OnCurrentChanging;
+                    _collectionView.CurrentChanged += OnCurrentChanged;
+                }
+            }
+
+            public void OnSelectionChanged(object sender, SelectionChangedEventArgs args)
+            {
+                var collectionView = _collectionView;
+                if (collectionView == null) return;
+
+                var selector = sender as Selector;
+                if (selector == null) return;
+
+                if (selector.IsSynchronizedWithCurrentItem == true &amp;amp;&amp;amp; selector.SelectedItem != collectionView.CurrentItem)
+                {
+                    selector.IsSynchronizedWithCurrentItem = false;
+                    selector.SelectedItem = collectionView.CurrentItem;
+                    selector.IsSynchronizedWithCurrentItem = true;
+                }
+            }
+
+            private void OnCurrentChanging(object sender, CurrentChangingEventArgs e)
+            {
+                var activatable = (sender as ICollectionView)?.CurrentItem as IActivatable;
+                if (activatable?.Deactivate() == false)
+                {
+                    if (e.IsCancelable)
+                        e.Cancel = true;
+                }
+            }
+
+            private void OnCurrentChanged(object sender, EventArgs e)
+            {
+                var activatable = (sender as ICollectionView)?.CurrentItem as IActivatable;
+                activatable?.Activate();
+            }
+        }
+    }
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h1 id=&#34;references-that-inspired-this-post&#34;&gt;References That Inspired This Post&lt;/h1&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;http://stackoverflow.com/questions/30706758/how-to-cancel-tab-change-in-wpf-tabcontrol&#34;&gt;Stack Overflow&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://coderelief.net/2011/11/07/fixing-issynchronizedwithcurrentitem-and-icollectionview-cancel-bug-with-an-attached-property/&#34;&gt;CodeRelief.NET&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
     
     <item>
       <title>WPF Magic Without Frameworks</title>
