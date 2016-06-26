@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <title>Generate All The Things</title>
+
+  <meta name="author" content="Remco Schoeman" />
+  
+  
+
+  <meta name="generator" content="Hugo 0.16" />
+
+  <link rel="alternate" href="https://resc.github.io/index.xml" type="application/rss+xml" title="The Dizzy Coder">
+
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="https://resc.github.io/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://resc.github.io/css/main.css" />
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" />
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+  <link rel="stylesheet" href="https://resc.github.io/css/pygment_highlights.css" />
+  
+  
+  <meta property="og:title" content="Generate All The Things" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="/" />
+  <meta property="og:image" content="img/avatar-icon.png" />
+  
+</head>
+
+
+  <body>
+
+    <nav class="navbar navbar-default navbar-fixed-top navbar-custom">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#main-navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://resc.github.io/">The Dizzy Coder</a>
+    </div>
+
+    <div class="collapse navbar-collapse" id="main-navbar">
+      <ul class="nav navbar-nav navbar-right">
+      
+        
+          <li>
+          <a title="Blog" href="/">Blog</a>
+  	      </li>
+  	    
+      
+        
+          <li>
+          <a title="About" href="/page/about/">About</a>
+  	      </li>
+  	    
+      
+      </ul>
+    </div>
+
+	<div class="avatar-container">
+	  <div class="avatar-img-border">
+      
+          <a title="The Dizzy Coder" href="https://resc.github.io/">
+              <img class="avatar-img" src="https://resc.github.io/img/avatar-icon.png" alt="The Dizzy Coder" />
+          </a>
+      
+	  </div>
+	</div>
+
+  </div>
+</nav>
+
+
+    <div role="main" class="container main-content">
+
+      
+        
+
+
+
+
+
+<header class="header-section ">
+
+<div class="intro-header no-img">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <h1>Generate All The Things</h1>
+      
+        
+      <h2 class="post-subheading">or how to save yourself some work in the long run</h2>
+      
+      
+      
+      
+      <span class="post-meta">Posted on June 25, 2016</span>
+      
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</header>
+
+
+
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+      <article role="main" class="blog-post">
+          <p>Coding is a lot of work, and sometimes it gets repetitive too. I don&rsquo;t like repetitive work so most of my projects grow some kind of code generator.
+Usually it starts with a unit test that outputs a simple class definition, and before you know it, it generates a complete data-access layer with <a href="http://nhibernate.info/">NHibernate</a> mappings in <a href="http://www.fluentnhibernate.org/">FluentNHibernate</a> that generate SQL create scripts&hellip; but that&rsquo;s a story for another post.</p>
+
+<p>So, here&rsquo;s my default &lsquo;plan&rsquo; for building ad-hoc code generators:</p>
+
+<ul>
+<li>Create a test project</li>
+
+<li><p>Add a <a href="https://msdn.microsoft.com/en-us/library/system.runtime.compilerservices.internalsvisibletoattribute(v=vs.110).aspx">InternalsVisibleTo</a> attribute to the target project with the assembly name of the test project, so that the test project can access methods and properties defined as internal in the target project.</p>
+
+<pre><code class="language-csharp">// expose internals to the test project.
+[assembly: InternalsVisibleTo(&quot;GenerateAllTheThings.Tests&quot;, AllInternalsVisible = true)]
+</code></pre></li>
+
+<li><p>Create a class <code>Source</code> to get the location of the source code using the <a href="https://msdn.microsoft.com/en-us/library/system.runtime.compilerservices.callerfilepathattribute(v=vs.110).aspx">CallerFilePath</a> attribute.</p>
+
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Source contains methods to find the source file 
+/// and directory at the time of compilation.
+/// &lt;/summary&gt;
+public static class Source
+{
+    /// &lt;summary&gt; 
+    /// Returns the source file path of the method that calls FilePath, 
+    /// do not supply any arguments, the compiler will do that for you. 
+    /// &lt;/summary&gt;
+    public static string FilePath([CallerFilePath] string callerFilePath = null)
+    {
+        return callerFilePath;
+    }
+
+    /// &lt;summary&gt; 
+    /// returns the directory of the source file
+    /// of the method that calls Directory.
+    /// &lt;/summary&gt;
+    public static string Directory([CallerFilePath] string callerFilePath = null)
+    {
+        return System.IO.Path.GetDirectoryName(callerFilePath);
+    }
+}
+</code></pre></li>
+
+<li><p>put an internal static property <code>SourceDirectory</code> on any class in the target directory for the code generator like this:</p>
+
+<pre><code class="language-csharp">internal static string SourceDirectory
+{
+    get { return Source.Directory(); }
+}
+</code></pre></li>
+
+<li><p>Create at least two types that you want to generate code for immediately, this prevents overspecialization of the generator.</p></li>
+
+<li><p>Add a test class named <code>Generator</code> with a unit test called <code>Generate</code> that generates some code for classes using the <a href="https://msdn.microsoft.com/en-us/library/mt656691.aspx">reflection api</a>.</p></li>
+
+<li><p>Don&rsquo;t be afraid, embrace the <a href="http://www.imdb.com/title/tt1375666/">Inception effect</a> (a.k.a. <a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">recursion</a>), generate types that the generator uses to generate more types. But stop if your brain starts hurting, it&rsquo;s a sign you&rsquo;ve taken this too far.</p></li>
+
+<li><p>Think about the conventions and project folder structure you want to use. Code generators are good tools to promote uniformity in coding and naming conventions, but those conventions have to be in place before they can be leveraged.</p></li>
+
+<li><p>Add the generated files to the project, the <a href="https://msdn.microsoft.com/en-us/library/wa80x488.aspx">partial</a> keyword is your friend if you want to attach generated code to an existing class.</p></li>
+
+<li><p>If the generator generates gibberish, correct the code in the generated file, and copy-paste the working code back into the generator and run the <code>Generate</code> test.</p></li>
+
+<li><p>Repeat the previous step as many times as needed.</p></li>
+</ul>
+
+<p>As an example I&rsquo;ve created a codegenerator that generates constructors and a simple <a href="https://msdn.microsoft.com/en-us/library/system.xml.serialization.ixmlserializable(v=vs.110).aspx">IXmlSerializable</a> implementation for immutable message classes. <a href="https://github.com/resc/wpfmagic/tree/master/GenerateAllTheThings">See the full code here</a></p>
+
+<p>This CodeWriter class helps keeping track of blocks and code indentation. I use it to write out code that reads as if it&rsquo;s hand coded, because I like it that way.</p>
+
+<pre><code class="language-csharp"> /// &lt;summary&gt; CodeWriter keeps track of indentation and blocks, to simplify writing code. &lt;/summary&gt;
+    public class CodeWriter : TextWriter
+    {
+        /// &lt;summary&gt; Creates a new file, or truncates an existing file &lt;/summary&gt;
+        public static CodeWriter CreateFile(string filepath)
+        {
+            return new CodeWriter(File.Open(filepath, FileMode.Create, FileAccess.Write, FileShare.Read));
+        }
+
+        private readonly TextWriter _w;
+        private char _newline;
+        private char[] _ignored
+            ;
+        private bool _writeIndent;
+        private int _indentLevel;
+
+        public CodeWriter() : this(new StringWriter())
+        {
+        }
+
+        public CodeWriter(Stream s) : this(new StreamWriter(s))
+        {
+        }
+
+        public CodeWriter(TextWriter w)
+        {
+            _w = w;
+            SetNewLine(w.NewLine);
+            IndentText = &quot;    &quot;;
+            BlockStart = &quot;{&quot;;
+            BlockEnd = &quot;}&quot;;
+            BlockCommentStart = &quot;/*&quot;;
+            BlockCommentEnd = &quot;*/&quot;;
+            CommentStart = &quot;//&quot;;
+            CommentEnd = w.NewLine;
+        }
+
+        public string IndentText { get; set; }
+
+        public string BlockStart { get; set; }
+        public string BlockEnd { get; set; }
+
+        public string BlockCommentStart { get; set; }
+        public string BlockCommentEnd { get; set; }
+
+        public string CommentStart { get; set; }
+        public string CommentEnd { get; set; }
+
+        public override Encoding Encoding
+        {
+            get { return _w.Encoding; }
+        }
+
+        public override string NewLine
+        {
+            get { return _w.NewLine; }
+            set { SetNewLine(value); }
+        }
+
+        public override void Write(char value)
+        {
+            WriteIndent();
+            if (value == _newline)
+                _writeIndent = true;
+
+            // normalize line endings...
+            if (value == _newline)
+                _w.Write(NewLine);
+            else if (!_ignored.Contains(value))
+                _w.Write(value);
+        }
+
+        /// &lt;summary&gt; Indents the code a level &lt;/summary&gt;
+        public IDisposable Indent()
+        {
+            _indentLevel++;
+            return Disposable.Create(Dedent);
+        }
+
+        /// &lt;summary&gt; Writes a block &lt;/summary&gt;
+        /// &lt;param name=&quot;trailer&quot;&gt;text to immediatly follow the closing brace, before the newline. usually a ;&lt;/param&gt;
+        public IDisposable Block(string trailer = null)
+        {
+            WriteLine(BlockStart);
+            var d = Indent();
+            return Disposable.Create(() =&gt;
+            {
+                d.Dispose();
+                WriteLine($&quot;{BlockEnd}{trailer}&quot;);
+            });
+        }
+
+        /// &lt;summary&gt; Writes a block comment&lt;/summary&gt;
+        public IDisposable BlockComment()
+        {
+            WriteLine(BlockCommentStart);
+            var d = Indent();
+            return Disposable.Create(() =&gt;
+            {
+                d.Dispose();
+                WriteLine($&quot;{BlockCommentEnd}&quot;);
+            });
+        }
+
+        public void WriteComment(string comment)
+        {
+            Write(CommentStart);
+            Write(comment.Replace(CommentEnd, $&quot;{NewLine}{CommentStart}&quot;));
+            Write(CommentEnd);
+        }
+
+        public override void Flush()
+        {
+            _w.Flush();
+        }
+
+        public override string ToString()
+        {
+            return _w.ToString();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Flush();
+                _w.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void SetNewLine(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                throw new ArgumentOutOfRangeException(nameof(value), &quot;Newline cannot be null or empty&quot;);
+            _w.NewLine = value;
+            _newline = value.ToCharArray().Last();
+            _ignored = value.ToCharArray().Except(new[] {_newline}).ToArray();
+        }
+
+        private void Dedent()
+        {
+            _indentLevel--;
+        }
+
+        private void WriteIndent()
+        {
+            if (_writeIndent)
+            {
+                for (int i = 0; i &lt; _indentLevel; i++)
+                    _w.Write(IndentText);
+
+                _writeIndent = false;
+            }
+        }
+    }
+
+
+</code></pre>
+
+      </article>
+
+      <ul class="pager blog-pager">
+        
+        <li class="previous">
+          <a href="https://resc.github.io/post/cancel-that-please/" data-toggle="tooltip" data-placement="top" title="Cancel That Please">&larr; Previous Post</a>
+        </li>
+        
+        
+      </ul>
+
+      
+
+    </div>
+  </div>
+</div>
+
+      
+
+    </div>
+
+    <footer>
+  <div class="container beautiful-jekyll-footer">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <ul class="list-inline text-center footer-links">
+          
+          
+          <li>
+            <a href="https://github.com/resc" title="GitHub">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+		      
+		      
+          <li>
+            <a href="mailto:remco.schoeman&#43;nospambotsplease@gmail.com" title="Email me">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-envelope fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+		      
+	    	  
+          <li>
+            <a href="https://stackoverflow.com/users/142676/remco-schoeman" title="StackOverflow">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-stack-overflow fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+
+    		  <li>
+      			<a href="https://resc.github.io/index.xml" title="RSS">
+      			  <span class="fa-stack fa-lg">
+        				<i class="fa fa-circle fa-stack-2x"></i>
+        				<i class="fa fa-rss fa-stack-1x fa-inverse"></i>
+      			  </span>
+      			</a>
+    		  </li>		
+
+        </ul>
+        <p class="copyright text-muted">
+    		  Remco Schoeman
+    		  &nbsp;&bull;&nbsp;
+    		  2016
+    		  
+    		  
+    		  &nbsp;&bull;&nbsp;
+    		  <a href="https://resc.github.io/">The Dizzy Coder</a>
+    		  
+  	    </p>
+  	        
+    		<p class="theme-by text-muted">
+    		  Theme by
+    		  <a href="http://deanattali.com/beautiful-jekyll/">beautiful-jekyll</a>
+    		</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://resc.github.io/js/jquery-1.11.2.min.js"></script>
+<script src="https://resc.github.io/js/bootstrap.min.js"></script>
+<script src="https://resc.github.io/js/main.js"></script>
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-78787337-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+
+  </body>
+</html>

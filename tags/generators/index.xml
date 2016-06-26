@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Generators on The Dizzy Coder</title>
+    <link>https://resc.github.io/tags/generators/</link>
+    <description>Recent content in Generators on The Dizzy Coder</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <managingEditor>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</managingEditor>
+    <webMaster>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</webMaster>
+    <lastBuildDate>Sat, 25 Jun 2016 19:03:05 +0200</lastBuildDate>
+    <atom:link href="https://resc.github.io/tags/generators/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Generate All The Things</title>
+      <link>https://resc.github.io/post/generate-all-the-things/</link>
+      <pubDate>Sat, 25 Jun 2016 19:03:05 +0200</pubDate>
+      <author>remco.schoeman&#43;nospambotsplease@gmail.com (Remco Schoeman)</author>
+      <guid>https://resc.github.io/post/generate-all-the-things/</guid>
+      <description>&lt;p&gt;Coding is a lot of work, and sometimes it gets repetitive too. I don&amp;rsquo;t like repetitive work so most of my projects grow some kind of code generator.
+Usually it starts with a unit test that outputs a simple class definition, and before you know it, it generates a complete data-access layer with &lt;a href=&#34;http://nhibernate.info/&#34;&gt;NHibernate&lt;/a&gt; mappings in &lt;a href=&#34;http://www.fluentnhibernate.org/&#34;&gt;FluentNHibernate&lt;/a&gt; that generate SQL create scripts&amp;hellip; but that&amp;rsquo;s a story for another post.&lt;/p&gt;
+
+&lt;p&gt;So, here&amp;rsquo;s my default &amp;lsquo;plan&amp;rsquo; for building ad-hoc code generators:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Create a test project&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Add a &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.runtime.compilerservices.internalsvisibletoattribute(v=vs.110).aspx&#34;&gt;InternalsVisibleTo&lt;/a&gt; attribute to the target project with the assembly name of the test project, so that the test project can access methods and properties defined as internal in the target project.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-csharp&#34;&gt;// expose internals to the test project.
+[assembly: InternalsVisibleTo(&amp;quot;GenerateAllTheThings.Tests&amp;quot;, AllInternalsVisible = true)]
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Create a class &lt;code&gt;Source&lt;/code&gt; to get the location of the source code using the &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.runtime.compilerservices.callerfilepathattribute(v=vs.110).aspx&#34;&gt;CallerFilePath&lt;/a&gt; attribute.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-csharp&#34;&gt;/// &amp;lt;summary&amp;gt;
+/// Source contains methods to find the source file 
+/// and directory at the time of compilation.
+/// &amp;lt;/summary&amp;gt;
+public static class Source
+{
+    /// &amp;lt;summary&amp;gt; 
+    /// Returns the source file path of the method that calls FilePath, 
+    /// do not supply any arguments, the compiler will do that for you. 
+    /// &amp;lt;/summary&amp;gt;
+    public static string FilePath([CallerFilePath] string callerFilePath = null)
+    {
+        return callerFilePath;
+    }
+
+    /// &amp;lt;summary&amp;gt; 
+    /// returns the directory of the source file
+    /// of the method that calls Directory.
+    /// &amp;lt;/summary&amp;gt;
+    public static string Directory([CallerFilePath] string callerFilePath = null)
+    {
+        return System.IO.Path.GetDirectoryName(callerFilePath);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;put an internal static property &lt;code&gt;SourceDirectory&lt;/code&gt; on any class in the target directory for the code generator like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-csharp&#34;&gt;internal static string SourceDirectory
+{
+    get { return Source.Directory(); }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Create at least two types that you want to generate code for immediately, this prevents overspecialization of the generator.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Add a test class named &lt;code&gt;Generator&lt;/code&gt; with a unit test called &lt;code&gt;Generate&lt;/code&gt; that generates some code for classes using the &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/mt656691.aspx&#34;&gt;reflection api&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Don&amp;rsquo;t be afraid, embrace the &lt;a href=&#34;http://www.imdb.com/title/tt1375666/&#34;&gt;Inception effect&lt;/a&gt; (a.k.a. &lt;a href=&#34;https://en.wikipedia.org/wiki/Recursion_(computer_science)&#34;&gt;recursion&lt;/a&gt;), generate types that the generator uses to generate more types. But stop if your brain starts hurting, it&amp;rsquo;s a sign you&amp;rsquo;ve taken this too far.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Think about the conventions and project folder structure you want to use. Code generators are good tools to promote uniformity in coding and naming conventions, but those conventions have to be in place before they can be leveraged.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Add the generated files to the project, the &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/wa80x488.aspx&#34;&gt;partial&lt;/a&gt; keyword is your friend if you want to attach generated code to an existing class.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;If the generator generates gibberish, correct the code in the generated file, and copy-paste the working code back into the generator and run the &lt;code&gt;Generate&lt;/code&gt; test.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Repeat the previous step as many times as needed.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As an example I&amp;rsquo;ve created a codegenerator that generates constructors and a simple &lt;a href=&#34;https://msdn.microsoft.com/en-us/library/system.xml.serialization.ixmlserializable(v=vs.110).aspx&#34;&gt;IXmlSerializable&lt;/a&gt; implementation for immutable message classes. &lt;a href=&#34;https://github.com/resc/wpfmagic/tree/master/GenerateAllTheThings&#34;&gt;See the full code here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;This CodeWriter class helps keeping track of blocks and code indentation. I use it to write out code that reads as if it&amp;rsquo;s hand coded, because I like it that way.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-csharp&#34;&gt; /// &amp;lt;summary&amp;gt; CodeWriter keeps track of indentation and blocks, to simplify writing code. &amp;lt;/summary&amp;gt;
+    public class CodeWriter : TextWriter
+    {
+        /// &amp;lt;summary&amp;gt; Creates a new file, or truncates an existing file &amp;lt;/summary&amp;gt;
+        public static CodeWriter CreateFile(string filepath)
+        {
+            return new CodeWriter(File.Open(filepath, FileMode.Create, FileAccess.Write, FileShare.Read));
+        }
+
+        private readonly TextWriter _w;
+        private char _newline;
+        private char[] _ignored
+            ;
+        private bool _writeIndent;
+        private int _indentLevel;
+
+        public CodeWriter() : this(new StringWriter())
+        {
+        }
+
+        public CodeWriter(Stream s) : this(new StreamWriter(s))
+        {
+        }
+
+        public CodeWriter(TextWriter w)
+        {
+            _w = w;
+            SetNewLine(w.NewLine);
+            IndentText = &amp;quot;    &amp;quot;;
+            BlockStart = &amp;quot;{&amp;quot;;
+            BlockEnd = &amp;quot;}&amp;quot;;
+            BlockCommentStart = &amp;quot;/*&amp;quot;;
+            BlockCommentEnd = &amp;quot;*/&amp;quot;;
+            CommentStart = &amp;quot;//&amp;quot;;
+            CommentEnd = w.NewLine;
+        }
+
+        public string IndentText { get; set; }
+
+        public string BlockStart { get; set; }
+        public string BlockEnd { get; set; }
+
+        public string BlockCommentStart { get; set; }
+        public string BlockCommentEnd { get; set; }
+
+        public string CommentStart { get; set; }
+        public string CommentEnd { get; set; }
+
+        public override Encoding Encoding
+        {
+            get { return _w.Encoding; }
+        }
+
+        public override string NewLine
+        {
+            get { return _w.NewLine; }
+            set { SetNewLine(value); }
+        }
+
+        public override void Write(char value)
+        {
+            WriteIndent();
+            if (value == _newline)
+                _writeIndent = true;
+
+            // normalize line endings...
+            if (value == _newline)
+                _w.Write(NewLine);
+            else if (!_ignored.Contains(value))
+                _w.Write(value);
+        }
+
+        /// &amp;lt;summary&amp;gt; Indents the code a level &amp;lt;/summary&amp;gt;
+        public IDisposable Indent()
+        {
+            _indentLevel++;
+            return Disposable.Create(Dedent);
+        }
+
+        /// &amp;lt;summary&amp;gt; Writes a block &amp;lt;/summary&amp;gt;
+        /// &amp;lt;param name=&amp;quot;trailer&amp;quot;&amp;gt;text to immediatly follow the closing brace, before the newline. usually a ;&amp;lt;/param&amp;gt;
+        public IDisposable Block(string trailer = null)
+        {
+            WriteLine(BlockStart);
+            var d = Indent();
+            return Disposable.Create(() =&amp;gt;
+            {
+                d.Dispose();
+                WriteLine($&amp;quot;{BlockEnd}{trailer}&amp;quot;);
+            });
+        }
+
+        /// &amp;lt;summary&amp;gt; Writes a block comment&amp;lt;/summary&amp;gt;
+        public IDisposable BlockComment()
+        {
+            WriteLine(BlockCommentStart);
+            var d = Indent();
+            return Disposable.Create(() =&amp;gt;
+            {
+                d.Dispose();
+                WriteLine($&amp;quot;{BlockCommentEnd}&amp;quot;);
+            });
+        }
+
+        public void WriteComment(string comment)
+        {
+            Write(CommentStart);
+            Write(comment.Replace(CommentEnd, $&amp;quot;{NewLine}{CommentStart}&amp;quot;));
+            Write(CommentEnd);
+        }
+
+        public override void Flush()
+        {
+            _w.Flush();
+        }
+
+        public override string ToString()
+        {
+            return _w.ToString();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Flush();
+                _w.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void SetNewLine(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                throw new ArgumentOutOfRangeException(nameof(value), &amp;quot;Newline cannot be null or empty&amp;quot;);
+            _w.NewLine = value;
+            _newline = value.ToCharArray().Last();
+            _ignored = value.ToCharArray().Except(new[] {_newline}).ToArray();
+        }
+
+        private void Dedent()
+        {
+            _indentLevel--;
+        }
+
+        private void WriteIndent()
+        {
+            if (_writeIndent)
+            {
+                for (int i = 0; i &amp;lt; _indentLevel; i++)
+                    _w.Write(IndentText);
+
+                _writeIndent = false;
+            }
+        }
+    }
+
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
